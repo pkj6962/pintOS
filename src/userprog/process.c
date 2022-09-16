@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -28,22 +29,95 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
-  char *fn_copy;
+  char *fn_copy, *actual_file_name;
   tid_t tid;
+  
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
+
+  // From here, we should parse file name from command line input. 
+
+  actual_file_name = parse_file_name_from(file_name);
+
+  strlcpy (fn_copy, actual_file_name, PGSIZE);
+
+  printf("actual_file_name: %s\n", actual_file_name); 
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+
+  tid = thread_create (actual_file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
 }
+
+char* parse_file_name_from(const char* file_name)
+{
+    char *file_name_copy, *rest, *actual_file_name;
+    int file_name_len = strlen(file_name) + 1; 
+
+    file_name_copy = (char*)malloc(sizeof(char) * file_name_len);
+    strlcpy(file_name_copy, file_name, file_name_len); 
+
+    printf("copy: %s\n", file_name_copy); 
+    actual_file_name = strtok_r(file_name_copy, " ", &rest);
+
+    return actual_file_name; 
+}
+
+
+  /*
+
+char* parse_file_name(const char* file_name)
+{
+    char *file_name_copy, *rest;
+    int file_name_len = strlen(file_name); 
+
+    file_name_copy = (char*)malloc(sizeof(char) * file_name_len);
+    strlcpy(file_name_copy, file_name, file_name_len); 
+    actual_file_name = strtok_r(file_name_copy, ' ', &rest);
+
+    return actual_file_name; 
+}
+
+
+
+  1. thread_create의 인자로 file_name만 들어가야 한다.
+    - fn_copy는 어떤 점에서 쓰이는지를 알아야 한다. 
+   
+
+    
+    [existing code]
+    strlcpy(fn_copy, actual_file_name, PGSIZE);
+    tid = thread_create(actual_file_name, ...);
+
+
+
+  - convert argument string into null-terminated 
+  - 기존의 commandline의 delimeter은 '\n'으로 바꾼다. 
+  - 각 argument의 시작지점 포인터를 저장하고 있는 char** tokens 배열을 반환한다. 
+  char** parse_argument(char* commandline, int token_num)
+  {
+    
+    int cnt = 0 
+    
+    char ** tokens = (char **)malloc(sizeof(char*) * MAXARGS); 
+
+    str_ptr = strtok_r(commandLine, ' ', &next_ptr); 
+    tokens[cnt++] = str_ptr;
+    while(str_ptr)
+    {
+      str_ptr = strtok_r(NULL, ' ', &next_ptr);
+      tokens[cnt++] = str_ptr
+    }
+
+    char** tokens
+  }
+*/
 
 /* A thread function that loads a user process and starts it
    running. */
@@ -59,7 +133,11 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
+
+  printf("hello world form start_process before load"); 
   success = load (file_name, &if_.eip, &if_.esp);
+  printf("hello world form start_process after load"); 
+
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -72,6 +150,9 @@ start_process (void *file_name_)
      arguments on the stack in the form of a `struct intr_frame',
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */
+  
+  printf("hello world form start_process after success judge\n"); 
+
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
   NOT_REACHED ();
 }
@@ -88,6 +169,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  while(1); // temporarily 
   return -1;
 }
 

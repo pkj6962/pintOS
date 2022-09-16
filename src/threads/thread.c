@@ -183,6 +183,11 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
+//@@@@@@@@@@@@@@@@@@@@@@@@DebugStart @@@@@@@@@@@@@@@@@@@@@@@@@@@
+  printf("hello world from thread_create\n"); 
+//@@@@@@@@@@@@@@@@@@@@@@@@DebugEnd @@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
   kf->eip = NULL;
@@ -200,6 +205,13 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+
+
+//@@@@@@@@@@@@@@@@@@@@@@@@DebugStart @@@@@@@@@@@@@@@@@@@@@@@@@@@
+  printf("hello world from thread_create end\n"); 
+//@@@@@@@@@@@@@@@@@@@@@@@@DebugEnd @@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
 
   return tid;
 }
