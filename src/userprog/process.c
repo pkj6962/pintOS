@@ -39,11 +39,11 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
 
+  strlcpy (fn_copy, file_name, PGSIZE);
+
   // From here, we should parse file name from command line input. 
 
   actual_file_name = parse_file_name_from(file_name);
-
-  strlcpy (fn_copy, actual_file_name, PGSIZE);
 
   printf("actual_file_name: %s\n", actual_file_name); 
 
@@ -70,63 +70,21 @@ char* parse_file_name_from(const char* file_name)
 }
 
 
-  /*
-
-char* parse_file_name(const char* file_name)
-{
-    char *file_name_copy, *rest;
-    int file_name_len = strlen(file_name); 
-
-    file_name_copy = (char*)malloc(sizeof(char) * file_name_len);
-    strlcpy(file_name_copy, file_name, file_name_len); 
-    actual_file_name = strtok_r(file_name_copy, ' ', &rest);
-
-    return actual_file_name; 
-}
-
-
-
-  1. thread_create의 인자로 file_name만 들어가야 한다.
-    - fn_copy는 어떤 점에서 쓰이는지를 알아야 한다. 
-   
-
-    
-    [existing code]
-    strlcpy(fn_copy, actual_file_name, PGSIZE);
-    tid = thread_create(actual_file_name, ...);
-
-
-
-  - convert argument string into null-terminated 
-  - 기존의 commandline의 delimeter은 '\n'으로 바꾼다. 
-  - 각 argument의 시작지점 포인터를 저장하고 있는 char** tokens 배열을 반환한다. 
-  char** parse_argument(char* commandline, int token_num)
-  {
-    
-    int cnt = 0 
-    
-    char ** tokens = (char **)malloc(sizeof(char*) * MAXARGS); 
-
-    str_ptr = strtok_r(commandLine, ' ', &next_ptr); 
-    tokens[cnt++] = str_ptr;
-    while(str_ptr)
-    {
-      str_ptr = strtok_r(NULL, ' ', &next_ptr);
-      tokens[cnt++] = str_ptr
-    }
-
-    char** tokens
-  }
-*/
-
-/* A thread function that loads a user process and starts it
-   running. */
 static void
 start_process (void *file_name_)
 {
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+  int argc; 
+
+  printf("length of file_name: %d\n", strlen(file_name)); 
+
+  char** parse = argument_parse(file_name, &argc); // new line inserted. 
+
+  printf("file name from 'start_process': %s\n", (char*)file_name_); 
+  // argument parsing
+
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -134,10 +92,12 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
 
-  printf("hello world form start_process before load"); 
-  success = load (file_name, &if_.eip, &if_.esp);
-  printf("hello world form start_process after load"); 
 
+
+  success = load (parse[0], &if_.eip, &if_.esp);
+  
+  argument_stack(parse, argc, &if_.esp); 
+  hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true); 
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -156,6 +116,121 @@ start_process (void *file_name_)
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
   NOT_REACHED ();
 }
+
+char** 
+argument_parse(char *commandLine, int *argc)
+{
+	char** parse = (char **)malloc(sizeof(char*) * MAXARGC); 
+	int cnt = 0; 
+	bool FirstCharAfterSpace = true; 
+  int len = strlen(commandLine); 
+	
+  for(int i = 0; i < len; i++)
+	{	
+    printf("%d\n", commandLine[i]); 
+		if(commandLine[i] == ' ')
+		{
+				commandLine[i] = '\0'; 
+				FirstCharAfterSpace = true; 		
+		}	
+		else if(FirstCharAfterSpace){
+
+				parse[cnt++] = &commandLine[i]; 
+				FirstCharAfterSpace = false;
+		}
+	}
+
+	*argc = cnt; 
+
+	return parse; 
+
+
+}
+
+void
+argument_stack(char** parse, int count, void **esp)
+{
+
+  void** argAddress; 
+  push_argument_value(parse, count, esp, &argAddress);
+  push_argument_address(argAddress, count, esp); 
+  push_meta_argument(count, esp);
+  free(argAddress);
+}
+
+void
+push_meta_argument(int count, void **esp)
+{
+  *esp = *esp -4; 
+  **(int**)esp = *esp + 4; 
+
+  *esp = *esp - 4; 
+  **(int**)esp = count;
+
+  *esp = *esp - 4; 
+  **(int**)esp = NULL; 
+
+  void *ptr1 = *esp + 4;
+  void *ptr2 = *(int**)esp + 4; 
+
+  printf("ptr1: %x ptr2: %x", ptr1, ptr2); 
+
+
+}
+
+void 
+push_argument_address(void **argAddress, int count, void **esp)
+{
+  
+    // null pointer 삽입
+    *esp = *esp - 4;
+    **(int**)esp = NULL; 
+
+    for(int i = 0; i < count; i++)
+    {
+      *esp = *esp - 4;
+      **(int **)esp = ((int**)argAddress)[i];
+      printf("inserted address: %x\n", ((int**)argAddress)[i]);
+    }
+
+}
+
+void
+push_argument_value(char **parse, int count ,void **esp, void***argAddress)
+{
+
+  int count_sum = 0, arglen; 
+  void **address = malloc(sizeof(char *) * count); 
+  int argIdx = 0; 
+
+  for(int i = count - 1; i >= 0; i--)
+	{
+
+		arglen = strlen(parse[i]) + 1; 
+    count_sum += arglen; 
+
+		for (int j = arglen - 1; j >= 0; j--)
+		{
+				*esp = *esp - 1; 
+				**(char**)esp = parse[i][j]; 
+		}
+    address[argIdx++] = *esp; 
+	}
+
+  // 총 길이를 4로 나눈 나머지만큼 zero-padding을 넣어준다. 
+  printf("count_sum: %d", count_sum);
+  for (int i = 0; (count_sum % 4) && (i < 4 - (count_sum % 4)); i++)
+  {
+    *esp = *esp -1; 
+    **(char**)esp = '\0'; 
+  }
+
+  *argAddress = address;
+
+}
+
+
+
 
 /* Waits for thread TID to die and returns its exit status.  If
    it was terminated by the kernel (i.e. killed due to an
@@ -519,7 +594,9 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
+        //*esp = PHYS_BASE - 12; // temporary code 
         *esp = PHYS_BASE;
+
       else
         palloc_free_page (kpage);
     }
