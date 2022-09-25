@@ -97,6 +97,7 @@ start_process (void *file_name_)
   success = load (parse[0], &if_.eip, &if_.esp);
   
   argument_stack(parse, argc, &if_.esp); 
+
   hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true); 
 
   /* If load failed, quit. */
@@ -111,7 +112,6 @@ start_process (void *file_name_)
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */
   
-  printf("hello world form start_process after success judge\n"); 
 
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
   NOT_REACHED ();
@@ -244,6 +244,7 @@ push_argument_value(char **parse, int count ,void **esp, void***argAddress)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  printf("child_tid: %d\n");
   while(1); // temporarily 
   return -1;
 }
