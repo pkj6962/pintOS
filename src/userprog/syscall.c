@@ -40,6 +40,8 @@ syscall_handler (struct intr_frame *f UNUSED)
     case(SYS_READ):
       *(int**)eax = sys_read(esp); 
       break; 
+    case(SYS_EXEC):
+      *(int**)eax = sys_exec(esp); 
 
   }
 
@@ -63,14 +65,18 @@ void
 check_address(void *addr)
 {
   // null인 경우, unmapped된 경우, kernel address인 경우 
-
-  if(!is_user_vaddr(addr) || addr == NULL)
+  printf("check_adderss1");
+  if(!is_user_vaddr(addr) || addr == NULL) // addr is kernel address or null 
+  {
+    printf("check_adderss2"); 
     exit(-1); 
-
+  }
   struct thread *t = thread_current();   
-  if(pagedir_get_page(t->pagedir , addr) == NULL)
+  if(pagedir_get_page(t->pagedir , addr) == NULL) // addr is unmapped
+  {  
+    printf("check_adderss3");
     exit(-1); 
-
+  }
   // 아직 검증 안됨: test돌려 봐야 함. 
 
 }
@@ -119,16 +125,14 @@ sys_read(void *esp)
   unsigned size = *((int*)esp + 3); 
   void* buffer = *((int*)esp + 2); 
   int fd = *((int*)esp + 1);
+  char c, CR = 13; 
+  int idx = 0; 
 
   int MAX_SIZE = 128; 
   char tempBuffer[MAX_SIZE]; 
 
   ASSERT(fd == 0); 
-
   check_address(buffer); 
-
-  char c, CR = 13; 
-  int idx = 0; 
 
   while((c = (char)input_getc()) != CR)
   {
@@ -138,4 +142,17 @@ sys_read(void *esp)
 
   strlcpy(buffer, tempBuffer, size+1);   
 
+}
+
+tid_t
+sys_exec(void* esp)
+{
+  tid_t tid; 
+  char* file_name = *((int *)esp + 1); 
+
+  check_address(file_name); 
+
+  printf("file name from sys_exec: %s", file_name); 
+  tid = process_execute(file_name); 
+  return tid; 
 }

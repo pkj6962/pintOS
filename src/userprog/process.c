@@ -43,6 +43,8 @@ process_execute (const char *file_name)
 
   // From here, we should parse file name from command line input. 
 
+  printf("original file name: %s", file_name); 
+
   actual_file_name = parse_file_name_from(file_name);
 
   printf("actual_file_name: %s\n", actual_file_name); 
