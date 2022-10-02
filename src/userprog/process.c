@@ -92,13 +92,17 @@ start_process (void *file_name_)
 
   success = load (parse[0], &if_.eip, &if_.esp);
   
-  argument_stack(parse, argc, &if_.esp); 
+  if (!success) 
+    thread_exit (-1);
 
+  argument_stack(parse, argc, &if_.esp); 
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
-    thread_exit (-1);
+  // if (!success) 
+  //   thread_exit (-1);
+
+
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in

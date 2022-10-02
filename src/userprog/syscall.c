@@ -9,6 +9,7 @@
 
 // should be deleted after debugging 
 #include "threads/vaddr.h"
+#include "filesys/filesys.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -23,6 +24,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 {
 
   int number = *((int*)(f->esp)); 
+
   void* esp = f->esp; 
   void** eax = &(f->eax); 
   
@@ -51,8 +53,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 void
 exit (int status)
 {
-  syscall1 (SYS_EXIT, status);
-  NOT_REACHED ();
+  syscall1 (SYS_EXIT, status); 
+  NOT_REACHED (); 
 }
 
 
@@ -60,17 +62,27 @@ void
 check_address(void *addr)
 {
   // null인 경우, unmapped된 경우, kernel address인 경우 
+  struct thread *t = thread_current();   
   if(!is_user_vaddr(addr) || addr == NULL) // addr is kernel address or null 
   {
-    exit(-1); 
+    printf("%s: exit(-1)\n", t->name); 
+    thread_exit(-1); 
+    // exit(-1); 
   }
-  struct thread *t = thread_current();   
   if(pagedir_get_page(t->pagedir , addr) == NULL) // addr is unmapped
   {  
-    exit(-1); 
+    // exit(-1); 
+    printf("%s: exit(-1)\n", t->name); 
+    thread_exit(-1); 
   }
-  // 아직 검증 안됨: test돌려 봐야 함. 
 
+}
+
+bool
+check_file(char * file_name)
+{
+  struct file * f =filesys_open(file_name);
+  return (f == NULL)? false: true;  
 }
 
 
@@ -138,10 +150,20 @@ tid_t
 sys_exec(void* esp)
 {
   tid_t tid; 
+  int status; 
   char* file_name = *((int *)esp + 1); 
 
   check_address(file_name); 
-
-  tid = process_execute(file_name); 
+  
+  if(check_file(file_name))
+  {
+    tid = process_execute(file_name); 
+    status = process_wait(tid); 
+  }
+  else{
+    tid = -1;
+    printf("load: %s: open failed\n", file_name); 
+  }
   return tid; 
 }
+
