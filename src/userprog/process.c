@@ -246,9 +246,18 @@ push_argument_value(char **parse, int count ,void **esp, void***argAddress)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  printf("child_tid: %d\n");
-  while(1); // temporarily 
-  return -1;
+  /*
+  all_list 에서 child_tid 찾기
+  해당 thread가 dying 될 때까지 관찰하기
+  */
+  struct thread* t;
+  t =  find_thread_from_alllist(child_tid);
+
+  if(t == NULL)
+    return -1; 
+  
+  while(t->status != THREAD_DYING)
+  return t->exit_status;
 }
 
 /* Free the current process's resources. */

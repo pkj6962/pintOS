@@ -25,7 +25,7 @@
 static struct list ready_list;
 
 /* List of all processes.  Processes are added to this list
-   when they are first scheduled and removed when they exit. */
+   when theey are first scheduled and removed when they exit. */
 static struct list all_list;
 
 /* Idle thread. */
@@ -594,3 +594,23 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+
+
+// all_list에서 thread tid를 가진 쓰레드를 찾아서 포인터 반환하기
+struct thread *
+find_thread_from_alllist(tid_t tid)
+{
+  struct list_elem *e; 
+  struct thread* t; 
+  for(e = list_begin(&all_list); e != list_end(&all_list);
+    e = list_next(e))
+  {
+      t = list_entry(e, struct thread, allelem); 
+      if(t->tid == tid)
+        return t; 
+  }
+  // no thread whose tid is tid
+  exit(-1);  
+
+}
