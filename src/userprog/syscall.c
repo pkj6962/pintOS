@@ -25,9 +25,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   int number = *((int*)(f->esp)); 
   void* esp = f->esp; 
   void** eax = &(f->eax); 
-
-  printf("number: %d\n", number); 
-
+  
   switch(number)
   {
     case(SYS_EXIT):
@@ -44,10 +42,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       *(int**)eax = sys_exec(esp); 
 
   }
-
-  printf ("system call!\n");
   
-  hex_dump(f->esp, f->esp, PHYS_BASE - f->esp, true); 
 
   // thread_exit ();
 }
@@ -65,16 +60,13 @@ void
 check_address(void *addr)
 {
   // null인 경우, unmapped된 경우, kernel address인 경우 
-  printf("check_adderss1");
   if(!is_user_vaddr(addr) || addr == NULL) // addr is kernel address or null 
   {
-    printf("check_adderss2"); 
     exit(-1); 
   }
   struct thread *t = thread_current();   
   if(pagedir_get_page(t->pagedir , addr) == NULL) // addr is unmapped
   {  
-    printf("check_adderss3");
     exit(-1); 
   }
   // 아직 검증 안됨: test돌려 봐야 함. 
@@ -90,9 +82,9 @@ sys_exit(void* esp)
   struct thread * t = thread_current(); 
   char* thread_name = t->name; 
 
-  printf("%s: exit(%d)", thread_name, status); 
+  printf("%s: exit(%d)\n", thread_name, status); 
 
-  thread_exit(); 
+  thread_exit(status); 
 
   // status 를 shared resource에 저장하는 코드 구현 필요
 
@@ -105,8 +97,6 @@ sys_write(void* esp)
   unsigned size = *((int*)esp + 3);
   const void* buffer = *((int*)esp + 2);
   int fd = *((int*)esp + 1); 
-
-  printf("size, buffer, fd: %d %x %d\n", size, buffer, fd); 
 
   ASSERT(fd == 1); // in project1, write system call only writes to stdout.
 
@@ -152,7 +142,6 @@ sys_exec(void* esp)
 
   check_address(file_name); 
 
-  printf("file name from sys_exec: %s", file_name); 
   tid = process_execute(file_name); 
   return tid; 
 }

@@ -19,6 +19,7 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 
+
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -43,17 +44,14 @@ process_execute (const char *file_name)
 
   // From here, we should parse file name from command line input. 
 
-  printf("original file name: %s", file_name); 
-
   actual_file_name = parse_file_name_from(file_name);
-
-  printf("actual_file_name: %s\n", actual_file_name); 
 
   /* Create a new thread to execute FILE_NAME. */
 
   tid = thread_create (actual_file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
+  
   return tid;
 }
 
@@ -65,7 +63,6 @@ char* parse_file_name_from(const char* file_name)
     file_name_copy = (char*)malloc(sizeof(char) * file_name_len);
     strlcpy(file_name_copy, file_name, file_name_len); 
 
-    printf("copy: %s\n", file_name_copy); 
     actual_file_name = strtok_r(file_name_copy, " ", &rest);
 
     return actual_file_name; 
@@ -80,11 +77,8 @@ start_process (void *file_name_)
   bool success;
   int argc; 
 
-  printf("length of file_name: %d\n", strlen(file_name)); 
-
   char** parse = argument_parse(file_name, &argc); // new line inserted. 
 
-  printf("file name from 'start_process': %s\n", (char*)file_name_); 
   // argument parsing
 
 
@@ -100,12 +94,11 @@ start_process (void *file_name_)
   
   argument_stack(parse, argc, &if_.esp); 
 
-  hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true); 
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
-    thread_exit ();
+    thread_exit (-1);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -129,7 +122,6 @@ argument_parse(char *commandLine, int *argc)
 	
   for(int i = 0; i < len; i++)
 	{	
-    printf("%d\n", commandLine[i]); 
 		if(commandLine[i] == ' ')
 		{
 				commandLine[i] = '\0'; 
@@ -175,8 +167,6 @@ push_meta_argument(int count, void **esp)
   void *ptr1 = *esp + 4;
   void *ptr2 = *(int**)esp + 4; 
 
-  printf("ptr1: %x ptr2: %x", ptr1, ptr2); 
-
 
 }
 
@@ -192,7 +182,6 @@ push_argument_address(void **argAddress, int count, void **esp)
     {
       *esp = *esp - 4;
       **(int **)esp = ((int**)argAddress)[i];
-      printf("inserted address: %x\n", ((int**)argAddress)[i]);
     }
 
 }
@@ -220,7 +209,6 @@ push_argument_value(char **parse, int count ,void **esp, void***argAddress)
 	}
 
   // 총 길이를 4로 나눈 나머지만큼 zero-padding을 넣어준다. 
-  printf("count_sum: %d", count_sum);
   for (int i = 0; (count_sum % 4) && (i < 4 - (count_sum % 4)); i++)
   {
     *esp = *esp -1; 
@@ -251,13 +239,18 @@ process_wait (tid_t child_tid UNUSED)
   해당 thread가 dying 될 때까지 관찰하기
   */
   struct thread* t;
-  t =  find_thread_from_alllist(child_tid);
+  int cnt = 0; 
+  // while(1); 
+  // while(cnt++ < 10000000);
 
-  if(t == NULL)
-    return -1; 
+  t =  find_thread_from_alllist(child_tid);
   
-  while(t->status != THREAD_DYING)
-  return t->exit_status;
+  // if(t == NULL)
+  //   return -1; 
+  
+  while(is_thread(t) && t->status != THREAD_DYING);
+
+  return -1;
 }
 
 /* Free the current process's resources. */

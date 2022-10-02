@@ -65,7 +65,7 @@ static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
 static void init_thread (struct thread *, const char *name, int priority);
-static bool is_thread (struct thread *) UNUSED;
+bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
@@ -176,16 +176,13 @@ thread_create (const char *name, int priority,
 
   /* Allocate thread. */
   t = palloc_get_page (PAL_ZERO);
+
   if (t == NULL)
     return TID_ERROR;
 
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
-
-//@@@@@@@@@@@@@@@@@@@@@@@@DebugStart @@@@@@@@@@@@@@@@@@@@@@@@@@@
-  printf("hello world from thread_create\n"); 
-//@@@@@@@@@@@@@@@@@@@@@@@@DebugEnd @@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
   /* Stack frame for kernel_thread(). */
@@ -205,13 +202,6 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
-
-//@@@@@@@@@@@@@@@@@@@@@@@@DebugStart @@@@@@@@@@@@@@@@@@@@@@@@@@@
-  printf("hello world from thread_create end\n"); 
-//@@@@@@@@@@@@@@@@@@@@@@@@DebugEnd @@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
 
   return tid;
 }
@@ -290,7 +280,7 @@ thread_tid (void)
 /* Deschedules the current thread and destroys it.  Never
    returns to the caller. */
 void
-thread_exit (void) 
+thread_exit (int status) 
 {
   ASSERT (!intr_context ());
 
@@ -303,6 +293,8 @@ thread_exit (void)
      when it calls thread_schedule_tail(). */
   intr_disable ();
   list_remove (&thread_current()->allelem);
+
+  thread_current()->exit_status = status; 
   thread_current ()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
@@ -434,7 +426,7 @@ kernel_thread (thread_func *function, void *aux)
 
   intr_enable ();       /* The scheduler runs with interrupts off. */
   function (aux);       /* Execute the thread function. */
-  thread_exit ();       /* If function() returns, kill the thread. */
+  thread_exit (0);       /* If function() returns, kill the thread. */
 }
 
 /* Returns the running thread. */
@@ -452,7 +444,8 @@ running_thread (void)
 }
 
 /* Returns true if T appears to point to a valid thread. */
-static bool
+// static bool
+bool
 is_thread (struct thread *t)
 {
   return t != NULL && t->magic == THREAD_MAGIC;
@@ -475,6 +468,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+
+  //TODO: init child_thread list 
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
