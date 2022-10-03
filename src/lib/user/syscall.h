@@ -34,6 +34,11 @@ void seek (int fd, unsigned position);
 unsigned tell (int fd);
 void close (int fd);
 
+/* Additional Implementation in Project 2 */
+
+int fibonacci(int n); 
+int max_of_four_int(int a, int b, int c, int d); 
+
 /* Project 3 and optionally project 4. */
 mapid_t mmap (int fd, void *addr);
 void munmap (mapid_t);
@@ -44,5 +49,7 @@ bool mkdir (const char *dir);
 bool readdir (int fd, char name[READDIR_MAX_LEN + 1]);
 bool isdir (int fd);
 int inumber (int fd);
+
+
 
 #endif /* lib/user/syscall.h */

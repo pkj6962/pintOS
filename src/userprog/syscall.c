@@ -12,6 +12,8 @@
 #include "filesys/filesys.h"
 
 static void syscall_handler (struct intr_frame *);
+void check_address(void *addr);
+
 
 void
 syscall_init (void) 
@@ -27,9 +29,10 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   void* esp = f->esp; 
   void** eax = &(f->eax); 
+  check_address((int*)esp+1);
   
-  switch(number)
-  {
+  switch(number) 
+  { 
     case(SYS_EXIT):
       sys_exit(esp); 
       NOT_REACHED(); 
@@ -42,7 +45,15 @@ syscall_handler (struct intr_frame *f UNUSED)
       break; 
     case(SYS_EXEC):
       *(int**)eax = sys_exec(esp); 
-
+      break; 
+    case(SYS_FIBONACCI):
+      *(int**)eax = sys_fibonacci(esp);
+      break;
+    case(SYS_MAX_OF_FOUR_INT):
+      *(int**)eax = sys_max_of_four_int(esp); 
+      break;
+    default:
+      *(int**)eax = -1; 
   }
   
 
@@ -63,16 +74,19 @@ check_address(void *addr)
 {
   // null인 경우, unmapped된 경우, kernel address인 경우 
   struct thread *t = thread_current();   
+
   if(!is_user_vaddr(addr) || addr == NULL) // addr is kernel address or null 
   {
+
     printf("%s: exit(-1)\n", t->name); 
     thread_exit(-1); 
     // exit(-1); 
   }
   if(pagedir_get_page(t->pagedir , addr) == NULL) // addr is unmapped
   {  
+
     // exit(-1); 
-    printf("%s: exit(-1)\n", t->name); 
+    printf("%s: exit(-1)\n", t->name);  
     thread_exit(-1); 
   }
 
@@ -81,7 +95,8 @@ check_address(void *addr)
 bool
 check_file(char * file_name)
 {
-  struct file * f =filesys_open(file_name);
+  char* actual_file_name = parse_file_name_from(file_name); 
+  struct file * f =filesys_open(actual_file_name);
   return (f == NULL)? false: true;  
 }
 
@@ -146,6 +161,7 @@ sys_read(void *esp)
 
 }
 
+
 tid_t
 sys_exec(void* esp)
 {
@@ -154,7 +170,6 @@ sys_exec(void* esp)
   char* file_name = *((int *)esp + 1); 
 
   check_address(file_name); 
-  
   if(check_file(file_name))
   {
     tid = process_execute(file_name); 
@@ -165,5 +180,40 @@ sys_exec(void* esp)
     printf("load: %s: open failed\n", file_name); 
   }
   return tid; 
+}
+
+
+int 
+sys_fibonacci(void *esp)
+{
+  int n = *((int*)esp + 1); 
+  
+  if (n < 3)
+    return 1; 
+  
+  int a1 = 1, a2 =1 , temp; 
+  for(int i = 0; i < n-2; i++)
+  {
+    temp = a2;
+    a2 += a1; 
+    a1 = temp;
+  }
+  return a2;
+}
+
+
+int 
+sys_max_of_four_int(void *esp)
+{
+  int num, max;
+  max = *((int *)esp + 1); 
+  
+  for(int i = 1; i < 4; i++)
+  {
+    num = *((int *)esp + i + 1); 
+    if (max < num)
+      max = num; 
+  }
+  return max; 
 }
 

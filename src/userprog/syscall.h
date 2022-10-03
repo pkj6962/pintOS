@@ -24,6 +24,9 @@ unsigned sys_write(void* esp);
 
 unsigned sys_read(void* esp);
 
+int sys_fibonacci(void *esp);
+
+int sys_max_of_four_int(void *esp);
 
 #endif /* userprog/syscall.h */
 
