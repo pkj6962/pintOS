@@ -33,13 +33,16 @@ syscall_handler (struct intr_frame *f UNUSED)
   
   switch(number) 
   { 
+    case(SYS_WAIT):
+      *(int**)eax = sys_wait(esp);
+      break; 
     case(SYS_EXIT):
       sys_exit(esp); 
       NOT_REACHED(); 
       break;
     case(SYS_WRITE):
       *(int**)eax = sys_write(esp); 
-      break;
+      break; 
     case(SYS_READ):
       *(int**)eax = sys_read(esp); 
       break; 
@@ -101,6 +104,14 @@ check_file(char * file_name)
 }
 
 
+int 
+sys_wait(void* esp)
+{
+  int child_tid = *((int*)esp + 1); 
+  return process_wait(child_tid); 
+}
+
+
 void
 sys_exit(void* esp)
 {
@@ -108,8 +119,13 @@ sys_exit(void* esp)
   
   struct thread * t = thread_current(); 
   char* thread_name = t->name; 
+  t->exit_status = status; 
+  // printf("status from exit: %d %d\n", status, t->tid); 
+  sema_up(&t->wait_sema); 
 
   printf("%s: exit(%d)\n", thread_name, status); 
+
+  sema_down(&t->free_sema); 
 
   thread_exit(status); 
 
@@ -173,9 +189,10 @@ sys_exec(void* esp)
   if(check_file(file_name))
   {
     tid = process_execute(file_name); 
-    status = process_wait(tid); 
+    // printf("tid from exec: %d\n", tid); 
+    // status = process_wait(tid); 
   }
-  else{
+  else{ 
     tid = -1;
     printf("load: %s: open failed\n", file_name); 
   }

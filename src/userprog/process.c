@@ -242,19 +242,53 @@ process_wait (tid_t child_tid UNUSED)
   all_list 에서 child_tid 찾기
   해당 thread가 dying 될 때까지 관찰하기
   */
-  struct thread* t;
-  int cnt = 0; 
-  // while(1); 
-  // while(cnt++ < 10000000);
+  struct thread* child, * cur;
+  int status; 
 
-  t =  find_thread_from_alllist(child_tid);
+  child = find_child(child_tid); 
+  if(child == NULL)
+    return -1; 
+
+  
+
+
+  sema_down(&child->wait_sema);
+  // printf("statuS: %d %d\n", child->exit_status, child->tid); 
+  status = child->exit_status; 
+
+  sema_up(&child->free_sema); 
+
+
+
+  return status; 
+
+
+  // t =  find_thread_from_alllist(child_tid);
   
   // if(t == NULL)
   //   return -1; 
   
-  while(is_thread(t) && t->status != THREAD_DYING);
+  // while(is_thread(t) && t->status != THREAD_DYING);
 
-  return -1;
+}
+
+
+struct thread * 
+find_child(tid_t child_tid)
+{
+  struct list_elem *e;
+  struct thread * t, *cur = thread_current(); 
+
+  for(e = list_begin(&(cur->children)); e != list_end(&(cur->children));
+  e = list_next(e))
+  {
+    t = list_entry(e, struct thread, elem); 
+    if(t->tid == child_tid)
+    {   
+      return t; 
+    }
+  }
+  return NULL; 
 }
 
 /* Free the current process's resources. */

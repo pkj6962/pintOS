@@ -5,6 +5,8 @@
 #include <list.h>
 #include <stdint.h>
 
+#include "synch.h"
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -85,7 +87,6 @@ struct thread
     /* Owned by thread.c. */
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
-    int exit_status;                    /* added: exit number which is passed when exit() calls. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
@@ -93,6 +94,12 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+
+
+   int exit_status;                    /* added: exit number which is passed when exit() calls. */
+   struct list children;
+   struct semaphore wait_sema;
+   struct semaphore free_sema; 
 
 
 
@@ -147,3 +154,4 @@ struct thread * find_thread_from_alllist(tid_t tid);
 
 
 #endif /* threads/thread.h */
+ 

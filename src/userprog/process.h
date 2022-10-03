@@ -18,4 +18,7 @@ void push_argument_address(void **argAddress, int count, void **esp);
 void push_meta_argument(int count, void **esp);
 void argument_stack(char** parse, int count, void **esp);
 
+struct thread * find_child(tid_t child_tid);
+
+
 #endif /* userprog/process.h */
